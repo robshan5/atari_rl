@@ -1,15 +1,34 @@
 {
-  description = "A very basic flake";
+    description = "Gymnasium + ALE dev environment";
 
-  inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
-  };
+    inputs = {
+        nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    };
 
-  outputs = { self, nixpkgs }: {
+    outputs = { self, nixpkgs }:
+        let
+            system = "x86_64-linux";
+            pkgs = import nixpkgs { inherit system; };
 
-    packages.x86_64-linux.hello = nixpkgs.legacyPackages.x86_64-linux.hello;
+            python = pkgs.python313;
 
-    packages.x86_64-linux.default = self.packages.x86_64-linux.hello;
+            pythonEnv = python.withPackages (ps: with ps; [
+                gymnasium
+                ale-py
+                torch
+            ]);
 
-  };
+        in {
+            devShells.${system}.default = pkgs.mkShell {
+                packages = [
+                    pythonEnv
+                ];
+                shellHook = ''
+                    export LD_LIBRARY_PATH=${pkgs.SDL2}/lib:$LD_LIBRARY_PATH
+                    export ALE_ROMS_DIR=$PWD/roms
+                    exec zsh
+                '';
+            };
+        };
 }
+
